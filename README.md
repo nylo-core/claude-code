@@ -1,6 +1,6 @@
 # nylo-claude-code
 
-A Claude Code plugin providing the **mobile-design** skill and **Nylo framework agents** for Flutter development.
+A Claude Code plugin with **17 skills** and **4 agents** for Flutter and Nylo framework development.
 
 ## Installation
 
@@ -12,22 +12,43 @@ A Claude Code plugin providing the **mobile-design** skill and **Nylo framework 
 /plugin install nylo-claude-code@nylo-core-claude-code
 ```
 
-## What's Included
+## Skills
 
-### Skill: mobile-design
+### Nylo Framework Skills
 
-Guides Claude in creating distinctive, production-grade Flutter mobile interfaces for iOS and Android phones. Enforces platform conventions (Cupertino/Material), touch targets, thumb zone optimization, dark mode support, and safe area handling.
+| Skill | Description | Usage |
+|-------|-------------|-------|
+| **nylo-routing** | Route definitions, navigation, route guards, parameters, NavigationHub | `/nylo-claude-code:nylo-routing` |
+| **nylo-networking** | API services, network()/networkResponse(), interceptors, caching, token refresh | `/nylo-claude-code:nylo-networking` |
+| **nylo-auth** | Auth.authenticate(), token storage, Backpack sync, authenticated routes | `/nylo-claude-code:nylo-auth` |
+| **nylo-storage** | NyStorage, Backpack (in-memory), cache strategies, persistent storage | `/nylo-claude-code:nylo-storage` |
+| **nylo-forms** | NyFormData, form validators, input field widget, form submission | `/nylo-claude-code:nylo-forms` |
+| **nylo-themes** | Theme system, light/dark mode, colors, fonts, asset management | `/nylo-claude-code:nylo-themes` |
+| **nylo-testing** | Widget tests, unit tests, integration tests in Nylo projects | `/nylo-claude-code:nylo-testing` |
+| **nylo-widgets** | Alerts, modals, buttons, CollectionView, FutureWidget, spacing, text translation | `/nylo-claude-code:nylo-widgets` |
+| **nylo-state-management** | NyState, NyPage, providers, events, decoders registration | `/nylo-claude-code:nylo-state-management` |
+| **nylo-app-setup** | Project setup, env config, directory structure, Metro CLI, logging, scheduler | `/nylo-claude-code:nylo-app-setup` |
 
-**Usage:**
-```bash
-/nylo-claude-code:mobile-design
-```
+### Flutter Platform Skills
 
-Then describe the screen you want to build. The skill handles layout, theming, accessibility, and platform-specific patterns.
+| Skill | Description | Usage |
+|-------|-------------|-------|
+| **flutter-app-config** | Change app name, bundle ID, package name across iOS and Android | `/nylo-claude-code:flutter-app-config` |
+| **flutter-permissions** | Add iOS and Android permissions with correct keys and descriptions | `/nylo-claude-code:flutter-permissions` |
+| **flutter-app-icons** | Launcher icons and splash screens setup | `/nylo-claude-code:flutter-app-icons` |
+| **flutter-versioning** | Version and build number management across platforms | `/nylo-claude-code:flutter-versioning` |
+| **flutter-signing** | iOS code signing and Android keystore configuration | `/nylo-claude-code:flutter-signing` |
+| **flutter-release** | Build release artifacts, Play Store and App Store submission | `/nylo-claude-code:flutter-release` |
 
-### Agents
+### Design Skill
 
-#### nylo-developer
+| Skill | Description | Usage |
+|-------|-------------|-------|
+| **mobile-design** | Production-grade Flutter mobile interfaces for iOS and Android | `/nylo-claude-code:mobile-design` |
+
+## Agents
+
+### nylo-developer
 
 Scaffolds and wires up Nylo components using Metro CLI with proper registrations. Creates pages, models, controllers, API services, providers, events, and forms following Nylo conventions.
 
@@ -36,15 +57,16 @@ Scaffolds and wires up Nylo components using Metro CLI with proper registrations
 - "Add an API endpoint to fetch leaderboard data"
 - "Build a feature for daily challenges with a page, model, and API service"
 
-#### nylo-code-reviewer
+### nylo-code-reviewer
 
-Reviews recently written or modified code for quality, correctness, security, and adherence to project conventions. Covers PHP, JavaScript, Dart, and configuration files.
+Reviews Flutter/Dart/Nylo code for quality, correctness, security, and performance. Checks Dart static analysis, Nylo conventions, widget composition, NyState patterns, const constructors, and build optimization.
 
 **Example prompts:**
 - "Review the code I just wrote"
-- "Check the new controller for issues"
+- "Check the new widget for issues"
+- "Review my API service changes"
 
-#### nylo-localisation
+### nylo-localisation
 
 Manages localisation across Nylo Flutter apps: scanning for translatable strings, synchronising locale files, generating translations, and validating consistency.
 
@@ -53,7 +75,7 @@ Manages localisation across Nylo Flutter apps: scanning for translatable strings
 - "Add German translations to my app"
 - "Check if all translations are ready for release"
 
-#### nylo-v6-to-v7-migrator
+### nylo-v6-to-v7-migrator
 
 Migrates Nylo Flutter apps from v6.x to v7.x with a methodical, phased approach covering dependency updates, boot sequence changes, theme system migration, and more.
 
