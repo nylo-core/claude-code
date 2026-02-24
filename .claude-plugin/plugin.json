@@ -1,0 +1,19 @@
+{
+  "name": "nylo-claude-code",
+  "version": "1.0.0",
+  "description": "Flutter mobile-design skill and Nylo framework agents (developer, code reviewer, localisation, v6-to-v7 migrator)",
+  "author": {
+    "name": "Nylo",
+    "email": "support@nylo.dev"
+  },
+  "homepage": "https://github.com/nylo-core/claude-code",
+  "repository": "https://github.com/nylo-core/claude-code",
+  "license": "MIT",
+  "keywords": ["flutter", "nylo", "mobile", "dart", "ios", "android"],
+  "agents": [
+    "./agents/nylo-developer.md",
+    "./agents/nylo-code-reviewer.md",
+    "./agents/nylo-localisation.md",
+    "./agents/nylo-v6-to-v7-migrator.md"
+  ]
+}

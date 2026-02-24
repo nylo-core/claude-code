@@ -1,0 +1,23 @@
+{
+  "name": "nylo-core-claude-code",
+  "description": "Nylo Framework Claude Code extensions: Flutter mobile design skill and Nylo development agents",
+  "owner": {
+    "name": "Nylo",
+    "email": "support@nylo.dev"
+  },
+  "plugins": [
+    {
+      "name": "nylo-claude-code",
+      "source": ".",
+      "description": "Flutter mobile-design skill and Nylo framework agents (developer, code reviewer, localisation, v6-to-v7 migrator)",
+      "version": "1.0.0",
+      "author": {
+        "name": "Nylo"
+      },
+      "homepage": "https://github.com/nylo-core/claude-code",
+      "repository": "https://github.com/nylo-core/claude-code",
+      "license": "MIT",
+      "keywords": ["flutter", "nylo", "mobile", "dart", "ios", "android"]
+    }
+  ]
+}
