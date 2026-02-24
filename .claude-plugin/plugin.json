@@ -1,7 +1,7 @@
 {
   "name": "nylo-claude-code",
-  "version": "1.1.1",
-  "description": "19 skills (Nylo framework + Flutter platform) and 4 agents for Flutter/Nylo development",
+  "version": "1.1.2",
+  "description": "19 skills (Nylo framework + Flutter platform) and 3 agents for Flutter/Nylo development",
   "author": {
     "name": "Nylo",
     "email": "support@nylo.dev"
@@ -13,7 +13,6 @@
   "agents": [
     "./agents/nylo-developer.md",
     "./agents/nylo-code-reviewer.md",
-    "./agents/nylo-localisation.md",
     "./agents/nylo-v6-to-v7-migrator.md"
   ]
 }

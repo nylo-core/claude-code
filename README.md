@@ -1,6 +1,6 @@
 # nylo-claude-code
 
-A Claude Code plugin with **19 skills** and **4 agents** for Flutter and Nylo framework development.
+A Claude Code plugin with **19 skills** and **3 agents** for Flutter and Nylo framework development.
 
 ## Installation
 
@@ -67,15 +67,6 @@ Reviews Flutter/Dart/Nylo code for quality, correctness, security, and performan
 - "Review the code I just wrote"
 - "Check the new widget for issues"
 - "Review my API service changes"
-
-### nylo-localisation
-
-Manages localisation across Nylo Flutter apps: scanning for translatable strings, synchronising locale files, generating translations, and validating consistency.
-
-**Example prompts:**
-- "Scan for untranslated strings"
-- "Add German translations to my app"
-- "Check if all translations are ready for release"
 
 ### nylo-v6-to-v7-migrator
 
