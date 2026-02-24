@@ -1,6 +1,6 @@
 # nylo-claude-code
 
-A Claude Code plugin with **17 skills** and **4 agents** for Flutter and Nylo framework development.
+A Claude Code plugin with **19 skills** and **4 agents** for Flutter and Nylo framework development.
 
 ## Installation
 
@@ -28,6 +28,8 @@ A Claude Code plugin with **17 skills** and **4 agents** for Flutter and Nylo fr
 | **nylo-widgets** | Alerts, modals, buttons, CollectionView, FutureWidget, spacing, text translation | `/nylo-claude-code:nylo-widgets` |
 | **nylo-state-management** | NyState, NyPage, providers, events, decoders registration | `/nylo-claude-code:nylo-state-management` |
 | **nylo-app-setup** | Project setup, env config, directory structure, Metro CLI, logging, scheduler | `/nylo-claude-code:nylo-app-setup` |
+| **nylo-localization** | i18n setup, locale files, .tr() translations, language switching, RTL support | `/nylo-claude-code:nylo-localization` |
+| **nylo-notifications** | Local notifications, scheduling, platform config, permission handling | `/nylo-claude-code:nylo-notifications` |
 
 ### Flutter Platform Skills
 
