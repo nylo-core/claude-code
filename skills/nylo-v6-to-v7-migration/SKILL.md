@@ -1,10 +1,6 @@
 ---
 name: nylo-v6-to-v7-migration
-description: >
-  Use when the user wants to migrate a Nylo Flutter app from v6 to v7,
-  upgrade Nylo to v7, or fix compatibility issues after updating Nylo dependencies.
-  Triggers on requests like "migrate my Nylo app", "upgrade to Nylo v7",
-  "convert v6 to v7", or "fix Nylo v7 errors".
+description: Migrate a Nylo Flutter project from v6 to v7 using the nylo-v6-to-v7-migrator agent
 disable-model-invocation: true
 ---
 
