@@ -8,7 +8,10 @@
   "plugins": [
     {
       "name": "nylo-claude-code",
-      "source": ".",
+      "source": {
+        "source": "github",
+        "repo": "nylo-core/claude-code"
+      },
       "description": "19 skills (Nylo framework + Flutter platform) and 3 agents for Flutter/Nylo development",
       "version": "1.1.2",
       "author": {
