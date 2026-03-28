@@ -18,13 +18,34 @@ You are tasked with migrating Nylo Flutter applications from v6.x to v7.x. This 
 - **Nylo v6 boilerplate**: https://github.com/nylo-core/nylo/tree/6.x
 - **v7.0.0 Changelog**: https://github.com/nylo-core/nylo/releases/tag/v7.0.0
 
+## Core Principle
+
+**Documentation-first**: Always consult the v7 boilerplate repository before making assumptions about how a v7 pattern should look. When encountering a migration item, read the actual v7 source file first — do not rely on memory or guesswork. The boilerplate is the single source of truth for correct v7 patterns.
+
 ## Migration Methodology
 
 Follow this strict phased approach:
 
-### Phase 1: Discovery & Analysis (ALWAYS DO THIS FIRST)
+### Phase 0: Create Safety Net (ALWAYS DO THIS FIRST)
 
-1. **Scan the v7 boilerplate thoroughly** before making ANY changes. Use file reading tools to examine:
+Before touching any code, establish a safe baseline:
+
+1. **Verify version control** — confirm the project is in a git repository with a clean working tree
+2. **Check for uncommitted changes** — if dirty, ask the user to commit or stash first
+3. **Suggest a migration branch** — recommend creating a dedicated branch (e.g., `migrate/v7`)
+4. **Run `flutter analyze` baseline** — record the current state of warnings/errors so you can compare after migration
+5. **Run existing tests** — if tests exist, run them to establish a passing baseline before changes begin
+
+### Phase 1: Assess Current State
+
+1. **Scan the user's current v6 project** to understand:
+   - Their specific directory structure
+   - Custom controllers, pages, models, providers
+   - Route configurations
+   - Any custom configurations or extensions
+   - Dependencies that may conflict
+
+2. **Scan the v7 boilerplate thoroughly** before making ANY changes. Use file reading tools to examine:
    - The full directory structure of the v7 boilerplate (compare with v6)
    - `pubspec.yaml` for dependency changes
    - `lib/` folder structure — look for new directories, removed directories, renamed files
@@ -38,115 +59,130 @@ Follow this strict phased approach:
    - Any new files in v7 that don't exist in v6
    - Any files in v6 that were removed in v7
 
-2. **Read the v7.0.0 changelog** carefully to understand:
+3. **Read the v7.0.0 changelog** carefully to understand:
    - All breaking changes
    - New features that replace old patterns
    - Deprecated APIs
    - New required configurations
 
-3. **Scan the user's current v6 project** to understand:
-   - Their specific directory structure
-   - Custom controllers, pages, models, providers
-   - Route configurations
-   - Any custom configurations or extensions
-   - Dependencies that may conflict
+### Phase 2: Prioritized Codebase Scan
 
-### Phase 2: Migration Task List
+Run targeted searches across the user's codebase to identify every file affected by each breaking change. Record all matches by BC number.
 
-After completing Phase 1, create a **detailed, ordered migration task list** organized by category. Present this to the user BEFORE making changes. Categories should include (but are not limited to):
+#### High Priority (compile-breaking — every project must address)
 
-1. **Dependency Updates** — pubspec.yaml changes, version bumps, new/removed packages
-2. **Project Structure Changes** — new directories, moved files, renamed files
-3. **Bootstrap/Entry Point** — changes to main.dart, app initialization
-4. **Routing Changes** — new routing patterns, route definitions
-5. **Controller/Page Changes** — base class changes, lifecycle method changes
-6. **Provider/Service Changes** — registration patterns, new base classes
-7. **Model Changes** — serialization changes, base class updates
-8. **Configuration Changes** — .env, config files, new config patterns
-9. **Widget/UI Changes** — new widget helpers, changed APIs
-10. **Cleanup** — removing deprecated code, unused imports
+| Pattern | Where | BC |
+|---------|-------|----|
+| `nylo_framework: ^6` | pubspec.yaml | BC-1 |
+| `Boot.nylo\|Boot.finished` | lib/ | BC-10 |
+| `class.*extends NyFormData` | lib/ | BC-15 |
+| `class.*extends AppButton` | lib/ | BC-17 |
+| `api<.*context:` | lib/ | BC-13 |
+| `onRequest.*PageRequest` | lib/ | BC-14 |
+| `handleSuccess.*(Response \|response)` | networking/ | BC-12 |
+| `BuildContext.*buildContext` | networking/ | BC-12 |
+| `validate:` | lib/ (form fields) | BC-15 |
+| `toJson()` (check for missing return type) | models/ | BC-16 |
 
-For each task, specify:
-- What needs to change
-- Why it needs to change (reference v7 pattern)
-- The risk level (low/medium/high)
-- The specific files affected in the user's project
+#### Medium Priority (runtime-breaking)
 
-### Phase 3: Implementation (One Step at a Time)
+| Pattern | Where | BC |
+|---------|-------|----|
+| `NyPullToRefresh\|NyListView\|NyFutureBuilder\|NyTextField` | lib/ | BC-19 |
+| `NavigationHubLayout.*=` | lib/ | BC-18 |
+| `addLoader\|addLogo\|addThemes\|addToastNotification` | providers/ | BC-11 |
+| `boot(Nylo\|afterBoot(Nylo` | providers/ | BC-11 |
+| `ThemeColor\b` | lib/ | BC-6 |
+| `BaseThemeConfig.*description` | lib/ | BC-6 |
+| `url_launcher\|launchUrl` | lib/ | BC-20 |
 
-- Execute migrations **one category at a time**, in dependency order
-- After each category, explain what was changed and why
-- Verify that changes are consistent with the v7 boilerplate patterns
+#### Low Priority (cosmetic / deprecated)
+
+| Pattern | Where | BC |
+|---------|-------|----|
+| `style:.*compact` | lib/ | BC-15 |
+| `NyLanguageSwitcher` | lib/ | BC-21 |
+| `deleteCollection` | lib/ | BC-23 |
+| `public/` references | lib/ | BC-2 |
+| `custom_commands.json` | commands/ | BC-3 |
+
+### Phase 3: Migration Plan Presentation
+
+After completing Phases 1 and 2, create a **detailed, ordered migration plan** organized by batch. Present this to the user BEFORE making changes.
+
+For each affected BC item, specify:
+- The BC number and title
+- The **Likelihood of Impact** rating (HIGH / MEDIUM / LOW)
+- What needs to change and why
+- The specific files affected in the user's project (from Phase 2 scan results)
+- The batch it belongs to
+
+Group items into the 7 implementation batches (see Phase 4). Only include BC items where Phase 2 found affected files — skip items that don't apply to this project.
+
+### Phase 4: Systematic Implementation
+
+Execute migrations using a **per-item loop** within each batch:
+
+**For each BC item:**
+1. **Search** — re-scan for the specific v6 pattern to confirm current state
+2. **List** — show the user all affected locations
+3. **Apply** — make the change, following the BC reference exactly
+4. **Verify** — confirm the change is correct (run `flutter analyze` if appropriate)
+
+**Implementation Batches (in order):**
+
+| Batch | Name | Items | Description |
+|-------|------|-------|-------------|
+| 1 | Project Configuration | BC-1, BC-2, BC-3 | pubspec.yaml, assets directory, commands |
+| 2 | Configuration System | BC-4, BC-5, BC-6, BC-7 | New config files, moved configs, theme, toast |
+| 3 | Bootstrap | BC-8, BC-9, BC-10 | main_widget, env system, boot sequence |
+| 4 | Service Layer | BC-11, BC-12 | Providers, networking |
+| 5 | Framework API | BC-13, BC-14, BC-15, BC-16, BC-17, BC-18, BC-19 | API calls, guards, forms, models, buttons, nav, collections |
+| 6 | Cleanup & Imports | BC-20, BC-21, BC-22, BC-23 | url_launcher, imports, locale keys, deprecated files |
+| 7 | Final Verification | BC-24 | Full verification scan |
+
+- Execute **one batch at a time**, in order
+- After each batch, run `flutter analyze` to catch issues early
 - Do NOT combine multiple unrelated changes in a single step
 - If unsure about a change, ask the user for clarification
 - Always show the user what you're about to change before making high-risk modifications
 
-### Phase 4: Verification
+### Phase 5: Verification
 
-- After all changes, do a final scan to ensure:
-  - No v6 patterns remain that should have been migrated
-  - All imports are updated
-  - No deprecated APIs are still in use
-  - The project structure matches v7 conventions
-  - pubspec.yaml is consistent with v7 requirements
+After all changes, do a comprehensive final check:
 
-## Important Rules
+1. **Re-run ALL Phase 2 scans** expecting zero v6 pattern matches — any remaining matches indicate missed migrations
+2. **Run `flutter analyze`** and compare against Phase 0 baseline — new warnings should only be from the user's own code, not migration artifacts
+3. **Run existing tests** — compare results against Phase 0 baseline
+4. **Verify project structure** matches v7 conventions:
+   - No v6 patterns remain that should have been migrated
+   - All imports are updated
+   - No deprecated APIs are still in use
+   - pubspec.yaml is consistent with v7 requirements
 
-1. **ALWAYS start with Phase 1** — never jump straight to making changes
-2. **ALWAYS present the migration task list** before implementing changes
-3. **Be conservative** — if you're unsure whether something needs to change, flag it for the user rather than changing it
-4. **Preserve custom logic** — the user's business logic, custom widgets, and app-specific code should be preserved. Only change framework-related patterns
-5. **One step at a time** — methodical, verifiable changes. Never bulk-change everything at once
-6. **Explain every change** — the user should understand what changed and why
-7. **Back up awareness** — remind the user to ensure they have their code in version control before starting migration
-8. **Don't assume** — if the v7 boilerplate has a pattern you're not 100% sure about, read the actual source code rather than guessing
+## Execution Strategy
 
-## Communication Style
-
-- Be thorough and precise in your explanations
-- Use code diffs or before/after comparisons when showing changes
-- Group related changes logically
-- Provide context for WHY each change is needed, not just WHAT to change
-- If the migration reveals potential improvements beyond v7 compatibility, note them as optional enhancements but don't implement them as part of the migration
+- **Batch similar mechanical changes** — e.g., all `toJson()` return type fixes in one pass
+- **Respect dependency order** — earlier batches must complete before later ones (e.g., pubspec updates before provider migration)
+- **Test incrementally** — run `flutter analyze` after each batch, not just at the end
+- **HIGH impact items first** within each batch — address compile-breaking changes before cosmetic ones
+- **Isolate complex changes** — the button system (BC-17) should be treated as its own mini-batch even within Batch 5, due to the number of files involved and the complexity of the structural changes
 
 ---
 
-## v6 to v7 Migration Reference
+## Breaking Changes Reference
 
-This section contains confirmed migration patterns verified across multiple real-world migrations. Use this as your primary reference — consult the boilerplate repos only when you encounter something not covered here.
+This section contains confirmed migration patterns verified across multiple real-world migrations. Each item is self-contained with impact rating, description, scan patterns, migration instructions, and gotchas.
 
-### Migration Checklist (verified order)
+### BC-1: Update pubspec.yaml
+**Likelihood of Impact: HIGH**
 
-1. Update pubspec.yaml (deps, SDK constraint, remove deprecated packages, remove .env from assets)
-2. Rename `public/` directory to `assets/` and update all asset references
-3. Migrate commands directory (`lib/app/commands/`): rename `custom_commands.json` to `commands.json`, add missing v7 default commands
-4. Create new v7 config files (app.dart, storage_keys.dart, toast_notification.dart, localization.dart, design.dart)
-5. Move config files to bootstrap (decoders, events, providers, theme)
-6. Migrate theme system (color_styles, base_theme, light/dark subdirs, remove `description` from BaseThemeConfig)
-7. Migrate toast notification widget (rename to avoid name conflict)
-8. Create main_widget.dart (replace bootstrap/app.dart)
-9. **Generate env system** (MANDATORY):
-   - Run `dart run nylo_framework:main make:key`
-   - Run `dart run nylo_framework:main make:env --force`
-   - Add `.env`, `.env.prod`, `.env.dev`, `.env.valet`, `lib/bootstrap/env.g.dart` to `.gitignore`
-10. Migrate boot sequence (main.dart with `env: Env.get` + boot.dart with `Main(nylo)`)
-11. Migrate all providers (setup/boot rename + nylo.configure with correct param names)
-12. Migrate networking (remove BuildContext, useNetworkLogger, interceptors spread, `NyResponse` in handleSuccess)
-13. Remove `context: context` from all `api<>()` calls in controllers
-14. Migrate route guards (onBefore/RouteContext/GuardResult)
-15. Migrate forms (NyFormData -> NyFormWidget, `validate:` -> `validator:`, remove `style: "compact"`)
-16. Migrate models (add explicit `Map<String, dynamic>` return type to `toJson()`)
-17. Migrate button system (AppButton -> StatefulAppButton, buildButton, remove ButtonState wrapper)
-18. Migrate NavigationHub layout (field -> method with `BuildContext` parameter)
-19. Migrate CollectionView builder signature (add `BuildContext context` first param)
-20. Replace `url_launcher` usage with `openUrl()` helper
-21. Update all imports across project (Keys->StorageKeysConfig, color.X->color.general.X, appFont->DesignConfig.appFont)
-22. Add required `nylo` translation keys to all locale files (lang/en.json, etc.)
-23. Remove deprecated v6 files
-24. Final verification scan (flutter analyze)
+Update all dependency versions, SDK constraints, and remove deprecated packages.
 
-### Pubspec Changes
+**Codebase Scan**:
+- `nylo_framework: ^6` in pubspec.yaml
 
+**Migration**:
 - SDK constraint: `^3.10.7` (was `>=3.4.0 <4.0.0`)
 - Remove `flutter` env constraint
 - `nylo_framework: ^7.0.0`
@@ -158,14 +194,216 @@ This section contains confirmed migration patterns verified across multiple real
 - Remove `flutter_local_notifications`
 - Remove `scaffold_ui`
 - Remove `rename`
+- Remove `.env`, `.env.prod`, `.env.dev`, `.env.valet` from the `assets:` section (they are no longer bundled as assets — see BC-9)
 
-### Boot Sequence
+### BC-2: Rename public/ Directory to assets/
+**Likelihood of Impact: HIGH**
 
+The `public/` directory is renamed to `assets/` in v7. This is a framework-level change.
+
+**Codebase Scan**:
+- `public/` references in lib/ and pubspec.yaml
+
+**Migration**:
+- Rename the `public/` directory to `assets/`
+- Remove `public/postman/` directory entirely
+- Update all asset references (e.g. `public/images/` → `assets/images/`)
+- Update `pubspec.yaml` asset paths accordingly
+
+**Gotchas**:
+- Search the entire codebase for `public/` string references — they appear in asset paths, image loading, and pubspec.yaml
+
+### BC-3: Migrate Commands Directory
+**Likelihood of Impact: LOW**
+
+Rename `custom_commands.json` and add new v7 default commands.
+
+**Codebase Scan**:
+- `custom_commands.json` in lib/app/commands/
+
+**Migration**:
+- Rename `lib/app/commands/custom_commands.json` to `lib/app/commands/commands.json`
+- Add missing v7 default commands:
+  - `download_fonts.dart` — NEW in v7: downloads Google Fonts, auto-detects from design.dart, updates pubspec.yaml and design configuration
+  - `motivational_quote.dart` — NEW in v7: example interactive command with API call
+- v7 `commands.json` format (array of objects with `name`, `category`, `script`):
+  ```json
+  [
+    {"name": "quote", "category": "motivational", "script": "motivational_quote.dart"},
+    {"name": "current_time", "category": "app", "script": "current_time.dart"},
+    {"name": "download_fonts", "category": "app", "script": "download_fonts.dart"}
+  ]
+  ```
+- When migrating, preserve any existing custom commands from the v6 `custom_commands.json` and merge them into the new `commands.json`
+- Metro commands simplified to shorter format (e.g., `metro app:current_time`)
+- Reference for v7 command files: https://github.com/nylo-core/nylo/tree/7.x/lib/app/commands
+
+**Gotchas**:
+- `commands.json` lives inside `lib/app/commands/`, NOT at the project root
+- If `lib/app/commands/` directory is missing entirely, scaffold it with v7 defaults (commands.json, current_time.dart, download_fonts.dart, motivational_quote.dart)
+
+### BC-4: Create New v7 Config Files
+**Likelihood of Impact: MEDIUM**
+
+v7 introduces several new configuration files using `final class` patterns.
+
+**Codebase Scan**:
+- Check for existing `config/app.dart`, `config/storage_keys.dart`, `config/toast_notification.dart`, `config/localization.dart`, `config/design.dart`
+
+**Migration**:
+- v7 uses `final class` for config classes
+- Create the following new config files:
+  - `config/app.dart` — `AppConfig` with appName, version, environment, apiBaseUrl, showSplashScreen
+  - `config/storage_keys.dart` — `StorageKeysConfig` (replaces `config/keys.dart`, class `Keys` → `StorageKeysConfig`)
+  - `config/toast_notification.dart` — `ToastNotificationConfig`
+  - `config/localization.dart` — `LocalizationConfig` with supportedLocales, languageCode, localeType, assetsDirectory
+  - `config/design.dart` — `DesignConfig` with appFont (GoogleFonts), logo, loader
+
+### BC-5: Move Config Files to Bootstrap
+**Likelihood of Impact: MEDIUM**
+
+Several config files move from `config/` to `bootstrap/`.
+
+**Codebase Scan**:
+- Check for `config/decoders.dart`, `config/events.dart`, `config/providers.dart`, `config/theme.dart`
+- Check all imports referencing these files
+
+**Migration**:
+- `config/decoders.dart` → `bootstrap/decoders.dart`
+- `config/events.dart` → `bootstrap/events.dart`
+- `config/providers.dart` → `bootstrap/providers.dart`
+- `config/theme.dart` → `bootstrap/theme.dart`
+- `config/keys.dart` → `config/storage_keys.dart`, class `Keys` → `StorageKeysConfig` (final class)
+- Update all imports across the project that reference the old paths
+
+### BC-6: Migrate Theme System
+**Likelihood of Impact: HIGH**
+
+The theme system is restructured with new base classes and structured color groups.
+
+**Codebase Scan**:
+- `ThemeColor\b` in lib/
+- `BaseThemeConfig.*description` in lib/
+- `ColorStyles extends BaseColorStyles` in lib/
+- `context.color.` references in lib/
+
+**Migration**:
+- v6: `ColorStyles extends BaseColorStyles` with flat color properties
+- v7: `ColorStyles extends ThemeColor` with structured groups (GeneralColors, AppBarColors, BottomTabBarColors)
+- v6: `ThemeColor` helper class for color resolution
+- v7: `ThemeColorResolver` helper (can use typedef for backward compat)
+- v7 adds `NyThemeType.light`/`NyThemeType.dark` to `BaseThemeConfig`
+- `BaseThemeConfig` in v7 removes the `description` parameter. Only `id`, `theme`, `colors`, and `themeType` remain
+- `id` uses a plain string (e.g. `'light_theme'`), NOT `getEnv()` calls
+
+Reference (v7 boilerplate `theme.dart`):
+```dart
+BaseThemeConfig<ColorStyles>(
+  id: 'light_theme',  // plain string, not getEnv()
+  theme: lightTheme,
+  colors: LightThemeColors(),
+  themeType: NyThemeType.light,
+),
+```
+
+**Gotchas**:
+- `ThemeColor` is now a framework class in v7; if project used `ThemeColor` as a helper, rename to `ThemeColorResolver` and add typedef for backward compat
+- `context.color.content` (flat v6) becomes `context.color.general.content` (structured v7) — but custom properties stay flat
+- When concrete theme classes use `implements ColorStyles`, they must provide ALL members including `general`, `appBar`, `bottomTabBar`. Fix: change from `implements` to `extends` so they inherit defaults
+- Custom ColorStyles properties (not in v7 boilerplate) must be preserved as direct properties alongside structured groups
+- `BaseThemeConfig` no longer has a `description` parameter in v7 — remove it or you get a compile error
+
+### BC-7: Migrate Toast Notification Widget
+**Likelihood of Impact: MEDIUM**
+
+Toast notification system is overhauled with new factory pattern.
+
+**Codebase Scan**:
+- `getToastNotificationWidget` in lib/
+- `NyToastNotificationStyleMetaHelper` in lib/
+- `ToastNotification` class definitions in lib/
+
+**Migration**:
+- v6: `getToastNotificationWidget` callback with `NyToastNotificationStyleMetaHelper`
+- v7: `ToastNotificationConfig.styles` map using `ToastStyleFactory` signature: `(ToastMeta meta, void Function(ToastMeta) updateMeta) => Widget`
+- v7 boilerplate separates: `ToastNotification` (plain class with static `style()` factory) from `_ToastNotificationBase` (StatelessWidget renderer)
+- No class name conflict: framework only has `ToastNotificationRegistry`, NOT `ToastNotification`
+- v7 uses `_toastMeta.dismiss` (built into ToastMeta) instead of custom `Function? _dismiss` constructor param
+- `flutter_styled_toast` import is unnecessary when `nylo_framework` is imported (re-exports it)
+- `showToastNotification()`: `icon:` param removed, `style: ToastNotificationStyleType.x` → `id: "x"`
+- Toast animations use `springFromTop()` and `fadeOut()`
+
+**Gotchas**:
+- Toast widget class name can conflict with v7 framework `ToastNotification` class — rename the project's widget to avoid conflicts
+
+### BC-8: Create main_widget.dart
+**Likelihood of Impact: HIGH**
+
+Replace `bootstrap/app.dart` (AppBuild widget) with `resources/widgets/main_widget.dart` (Main widget using NyPage).
+
+**Codebase Scan**:
+- `bootstrap/app.dart` in lib/
+- `AppBuild` references in lib/
+
+**Migration**:
+- v7 removes `lib/bootstrap/app.dart` (AppBuild widget)
+- Create `lib/resources/widgets/main_widget.dart` with `Main` widget using `NyPage`
+- The `Main` widget receives the `nylo` instance as a constructor parameter
+
+**Gotchas**:
+- `runApp(Main(nylo))` — the `nylo` instance MUST be passed to `Main()`. Do NOT write `runApp(Main())` without it
+
+### BC-9: Generate Env System (MANDATORY)
+**Likelihood of Impact: HIGH**
+
+`Nylo.init()` now REQUIRES `env: Env.get` parameter — this is NOT optional.
+
+**Codebase Scan**:
+- `Nylo.init(` in lib/main.dart
+- `.env` references in pubspec.yaml assets section
+
+**Migration steps (must be done in order)**:
+1. Run `dart run nylo_framework:main make:key` to generate the app key
+2. Run `dart run nylo_framework:main make:env --force` to generate `lib/bootstrap/env.g.dart`
+3. Update `main.dart` to import `env.g.dart` and use `env: Env.get`
+4. Add `.env`, `.env.prod`, `.env.dev`, `.env.valet`, and `lib/bootstrap/env.g.dart` to `.gitignore`
+5. Remove `.env`, `.env.prod`, `.env.dev`, `.env.valet` from `pubspec.yaml` assets section (they are no longer bundled as assets)
+
+Reference (v7 `main.dart`):
+```dart
+import 'dart:ui';
+import '/bootstrap/env.g.dart';
+import 'package:nylo_framework/nylo_framework.dart';
+import 'bootstrap/boot.dart';
+
+void main() async {
+  await Nylo.init(
+    env: Env.get,
+    setup: Boot.nylo(),
+    appLifecycle: {},
+  );
+}
+```
+
+**Gotchas**:
+- `main.dart` MUST include `env: Env.get` — run `make:key` and `make:env --force` to generate the env files
+- Remove `.env` files from `pubspec.yaml` assets — they are no longer bundled
+- `.env` and `lib/bootstrap/env.g.dart` should be added to `.gitignore`
+
+### BC-10: Migrate Boot Sequence
+**Likelihood of Impact: HIGH**
+
+The boot sequence changes from two separate functions to a single `BootConfig` object.
+
+**Codebase Scan**:
+- `Boot.nylo\|Boot.finished` in lib/
+- `setupFinished` in lib/main.dart
+- `_setup()` in bootstrap/boot.dart
+
+**Migration**:
 - v6: `Boot.nylo()` returns `Future<Nylo>`, `Boot.finished()` returns `Future<void>`. `Nylo.init(setup: Boot.nylo, setupFinished: Boot.finished)`
 - v7: `Boot.nylo()` returns `BootConfig` with `setup` and `boot` callbacks. `Nylo.init(setup: Boot.nylo())`
 - v7 boot.dart uses `setupApplication(providers)` instead of `bootApplication(providers)`
-- v7 removes `lib/bootstrap/app.dart` (AppBuild widget) and replaces with `lib/resources/widgets/main_widget.dart` (Main widget using NyPage)
-- **IMPORTANT**: `runApp(Main(nylo))` — the `nylo` instance MUST be passed to `Main()`. Do NOT write `runApp(Main())` without it
 - v7 `_init()` replaces v6 `_setup()` in the boot callback
 - `AppConfig.showSplashScreen` replaces `getEnv('SHOW_SPLASH_SCREEN')` for splash screen control
 
@@ -177,15 +415,27 @@ boot: (Nylo nylo) async {
 },
 ```
 
-### Provider API
+**Gotchas**:
+- `runApp(Main(nylo))` — MUST pass the `nylo` instance to `Main()`. Omitting it causes the app to fail at boot
+- `_init()` replaces `_setup()` — don't keep the old method name
 
+### BC-11: Migrate All Providers
+**Likelihood of Impact: HIGH**
+
+Provider lifecycle methods are renamed and AppProvider uses a single `nylo.configure()` call.
+
+**Codebase Scan**:
+- `boot(Nylo\|afterBoot(Nylo` in providers/
+- `addLoader\|addLogo\|addThemes\|addToastNotification` in providers/
+- `nylo.addX(` in providers/
+
+**Migration**:
 - v6: `boot(Nylo nylo)` for setup, `afterBoot(Nylo nylo)` for post-boot
 - v7: `setup(Nylo nylo)` for setup, `boot(Nylo nylo)` for post-boot
 - v6 AppProvider: chain of `nylo.addX()` calls (addLoader, addLogo, addThemes, addToastNotification, addModelDecoders, etc.)
 - v7 AppProvider: single `nylo.configure()` call with named params
-- **IMPORTANT**: `syncKeys` param passes a getter reference, NOT a function call: `syncKeys: StorageKeysConfig.syncedOnBoot` (no parentheses). Do NOT write `StorageKeysConfig.syncedOnBoot()` — it is a getter, not a method
-- **IMPORTANT**: Use correct parameter names — `themes:` (NOT `appThemes:`), `toastNotifications:` (NOT `toastNotification:`)
-- **IMPORTANT**: Do NOT use separate `nylo.useErrorStack()` or `NyLocalization.instance.init()` calls — include them as params in `nylo.configure()`
+- Use correct parameter names — `themes:` (NOT `appThemes:`), `toastNotifications:` (NOT `toastNotification:`)
+- Do NOT use separate `nylo.useErrorStack()` or `NyLocalization.instance.init()` calls — include them as params in `nylo.configure()`
 
 Reference (v7 boilerplate `app_provider.dart` — complete `nylo.configure()` call):
 ```dart
@@ -212,92 +462,73 @@ await nylo.configure(
 );
 ```
 
-### Config File Moves
+**Gotchas**:
+- `syncKeys: StorageKeysConfig.syncedOnBoot` — NO parentheses. It's a getter reference, not a method call. Writing `syncedOnBoot()` will cause a compile error
+- `nylo.configure()` parameter names: use `themes:` (not `appThemes:`), `toastNotifications:` (not `toastNotification:`). Include `useErrorStack:` as a param, not a separate `nylo.useErrorStack()` call. Include `localization:` as a param, not a separate `NyLocalization.instance.init()` call
 
-- `config/decoders.dart` -> `bootstrap/decoders.dart`
-- `config/events.dart` -> `bootstrap/events.dart`
-- `config/providers.dart` -> `bootstrap/providers.dart`
-- `config/theme.dart` -> `bootstrap/theme.dart`
-- `config/keys.dart` -> `config/storage_keys.dart`, class `Keys` -> `StorageKeysConfig` (final class)
+### BC-12: Migrate Networking
+**Likelihood of Impact: HIGH**
 
-### Config File Patterns
+Networking classes remove BuildContext dependency and change response types.
 
-- v7 uses `final class` for config classes: `AppConfig`, `StorageKeysConfig`, `ToastNotificationConfig`, `LocalizationConfig`, `DesignConfig`
-- `config/localization.dart` — `LocalizationConfig` with supportedLocales, languageCode, localeType, assetsDirectory
-- `config/design.dart` — `DesignConfig` with appFont (GoogleFonts), logo, loader
-- `config/app.dart` — `AppConfig` with appName, version, environment, apiBaseUrl, showSplashScreen
+**Codebase Scan**:
+- `BuildContext.*buildContext` in networking/
+- `handleSuccess.*(Response |response)` in networking/
+- `PrettyDioLogger` in lib/
 
-### Theme System
-
-- v6: `ColorStyles extends BaseColorStyles` with flat color properties
-- v7: `ColorStyles extends ThemeColor` with structured groups (GeneralColors, AppBarColors, BottomTabBarColors)
-- v6: `ThemeColor` helper class for color resolution
-- v7: `ThemeColorResolver` helper (can use typedef for backward compat)
-- v7 adds `NyThemeType.light`/`NyThemeType.dark` to `BaseThemeConfig`
-- **IMPORTANT**: `BaseThemeConfig` in v7 removes the `description` parameter. Only `id`, `theme`, `colors`, and `themeType` remain
-- **IMPORTANT**: `id` uses a plain string (e.g. `'light_theme'`), NOT `getEnv()` calls
-
-Reference (v7 boilerplate `theme.dart`):
-```dart
-BaseThemeConfig<ColorStyles>(
-  id: 'light_theme',  // plain string, not getEnv()
-  theme: lightTheme,
-  colors: LightThemeColors(),
-  themeType: NyThemeType.light,
-),
-```
-
-### Toast Notifications
-
-- v6: `getToastNotificationWidget` callback with `NyToastNotificationStyleMetaHelper`
-- v7: `ToastNotificationConfig.styles` map using `ToastStyleFactory` signature: `(ToastMeta meta, void Function(ToastMeta) updateMeta) => Widget`
-- v7 boilerplate separates: `ToastNotification` (plain class with static `style()` factory) from `_ToastNotificationBase` (StatelessWidget renderer)
-- No class name conflict: framework only has `ToastNotificationRegistry`, NOT `ToastNotification`
-- v7 uses `_toastMeta.dismiss` (built into ToastMeta) instead of custom `Function? _dismiss` constructor param
-- `flutter_styled_toast` import is unnecessary when `nylo_framework` is imported (re-exports it)
-
-### Networking
-
+**Migration**:
 - v6: `ApiService({BuildContext? buildContext}) : super(buildContext, decoders: ...)`
 - v7: `ApiService() : super(decoders: ..., useNetworkLogger: true)`
 - v6: `PrettyDioLogger` interceptor
 - v7: Built-in `useNetworkLogger: true`, interceptors use spread `...super.interceptors`
-- **IMPORTANT**: `handleSuccess` callback type changed — always use `NyResponse` as the parameter type:
+- `handleSuccess` callback type changed — always use `NyResponse` as the parameter type:
   - v6: `handleSuccess: (response) {` or `handleSuccess: (Response response) {`
   - v7: `handleSuccess: (NyResponse response) {`
 
-### API Call Changes
+**Gotchas**:
+- `handleSuccess` callbacks must use `NyResponse` type, NOT `Response` or untyped `response`
 
-- **IMPORTANT**: `api<>()` calls no longer accept a `context:` parameter in v7
-  - v6: `api<SomeService>((request) => request.method(), context: context)`
-  - v7: `api<SomeService>((request) => request.method())` — remove `context: context`
-  - Scan all controllers for `api<` calls and remove any `context:` parameter
+### BC-13: Remove context from api<>() Calls
+**Likelihood of Impact: HIGH**
 
-### Route Guards
+`api<>()` calls no longer accept a `context:` parameter in v7.
 
+**Codebase Scan**:
+- `api<.*context:` in lib/
+
+**Migration**:
+- v6: `api<SomeService>((request) => request.method(), context: context)`
+- v7: `api<SomeService>((request) => request.method())` — remove `context: context`
+- Scan all controllers for `api<` calls and remove any `context:` parameter
+
+**Gotchas**:
+- `api<>()` calls no longer accept `context: context` — remove the parameter from all controller `api<>()` calls
+
+### BC-14: Migrate Route Guards
+**Likelihood of Impact: MEDIUM**
+
+Route guard API changes method names and return types.
+
+**Codebase Scan**:
+- `onRequest.*PageRequest` in lib/
+
+**Migration**:
 - v6: `onRequest(PageRequest pageRequest)` returning `PageRequest`
 - v7: `onBefore(RouteContext context)` returning `Future<GuardResult>`
 - v7 uses `return next()` to pass, `return redirect(SomePage.path)` to redirect
 
-### Widget Renames (v6 -> v7)
+### BC-15: Migrate Forms
+**Likelihood of Impact: HIGH**
 
-- `NyFutureBuilder` -> REMOVED (use standard Flutter `FutureBuilder<T>`)
-- `NyTextField` -> REMOVED (use standard Flutter `TextField`)
-- `NyLanguageSwitcher` -> `LanguageSwitcher` (same API)
-- `NyRichText` -> REMOVED (use Flutter `Column` with `Text` children or `RichText`)
-- `NyValidator` -> REMOVED (use inline validation logic)
-- `NyForm` wrapper -> `NyFormWidget` (abstract class; forms extend it directly as the widget)
-- `NyForm.submit(...)` -> `NyFormWidget.submit(...)`
-- `NyPullToRefresh` -> `CollectionView<T>.pullable()` / `CollectionView<T>.pullableGrid()`
-- `NyPullToRefresh.grid()` -> `CollectionView<T>.pullableGrid()`
-- `NyListView` -> REMOVED (use standard Flutter `ListView.builder`/`ListView.separated`)
-- `ButtonState` params: `skeletonizerLoading`/`loading` -> `loadingStyle: LoadingStyle?`
-- `showToastNotification()`: `icon:` param removed, `style: ToastNotificationStyleType.x` -> `id: "x"`
-- `NyState.validate()` -> REMOVED from NyState/NyPage; only exists on `NyController.validate()`
-- `NyStorage.deleteCollection()` -> `NyStorage.delete()` (deprecated in v7)
+The form system is redesigned — forms ARE the widget in v7.
 
-### Form System (v6 -> v7)
+**Codebase Scan**:
+- `class.*extends NyFormData` in lib/
+- `validate:` in lib/ (form fields)
+- `style:.*compact` in lib/
+- `NyForm(` or `NyForm.list(` in lib/
 
+**Migration**:
 - v6: Forms extend `NyFormData`, used as `NyForm(form: formInstance, footer: ...)`
 - v7: Forms extend `NyFormWidget` (ARE the widget), used as `MyForm(submitButton: ..., footer: ...)`
 - **Constructor**: v7 forms MUST use this exact constructor pattern:
@@ -311,163 +542,40 @@ BaseThemeConfig<ColorStyles>(
   ```
   Example: `static NyFormActions get actions => const NyFormActions('RegisterForm');`
 - Reference: https://github.com/nylo-core/nylo/blob/7.x/lib/app/forms/register_form.dart
-- Submit: `form.submit(onSuccess: ...)` -> `MyForm.actions.submit(onSuccess: ...)`
-- `NyForm.list(form: form, children: [...])` -> `MyForm(footer: Column(children: [...]))`
-- **IMPORTANT**: `validate:` parameter renamed to `validator:` in v7 form fields — update all occurrences
-- **IMPORTANT**: `style: "compact"` parameter removed in v7 form fields — delete all occurrences
+- Submit: `form.submit(onSuccess: ...)` → `MyForm.actions.submit(onSuccess: ...)`
+- `NyForm.list(form: form, children: [...])` → `MyForm(footer: Column(children: [...]))`
+- `validate:` parameter renamed to `validator:` in v7 form fields — update all occurrences
+- `style: "compact"` parameter removed in v7 form fields — delete all occurrences
 
-### Model Changes
+**Gotchas**:
+- Form fields: `validate:` renamed to `validator:`, and `style: "compact"` is removed entirely
 
+### BC-16: Migrate Models (toJson Return Type)
+**Likelihood of Impact: HIGH**
+
+All models must have explicit return types on `toJson()`.
+
+**Codebase Scan**:
+- `toJson()` in models/ (check for missing `Map<String, dynamic>` return type)
+
+**Migration**:
 - v6: `toJson() {` (implicit dynamic return type)
 - v7: `Map<String, dynamic> toJson() {` (explicit return type required)
 - Scan ALL models extending `Model` and ensure `toJson` has the explicit `Map<String, dynamic>` return type
 - This affects every model file — common ones include: user, booking, vehicle, shop, address, notification_resource, review, faq, etc.
 
-### NyPullToRefresh -> CollectionView Migration
+**Gotchas**:
+- All models extending `Model` must have explicit `Map<String, dynamic>` return type on `toJson()` — implicit return types cause errors
 
-- v7 has `CollectionView<T>` which replaces both `NyPullToRefresh` and `NyListView`
-- Key constructors: `.pullable()`, `.pullableGrid()`, `.pullableSeparated()`
-- API mapping: `child:` -> `builder:`, builder MUST include `BuildContext context` as the first parameter:
-  - v6: `child: (item) { ... }`
-  - v7: `builder: (BuildContext context, CollectionItem item) { ... }`
-- `data: (page) async {...}` stays the same (param renamed to `iteration` in source but works with `page`)
-- Supports: `empty:`, `header:`, `sort:`, `loadingStyle:`, `stateName:`, `scrollDirection:`
-- `CollectionView.stateReset(stateName)` replaces `NyPullToRefresh.stateReset()`
-- `CollectionView.removeFromIndex(stateName, index)` for removing items
-- `StateAction.refreshPage(stateName)` still works for triggering refreshes
-
-### Env System (new in v7) — MANDATORY
-
-- `Nylo.init()` now REQUIRES `env: Env.get` parameter — this is NOT optional
-- **Migration steps (must be done in order)**:
-  1. Run `dart run nylo_framework:main make:key` to generate the app key
-  2. Run `dart run nylo_framework:main make:env --force` to generate `lib/bootstrap/env.g.dart`
-  3. Update `main.dart` to import `env.g.dart` and use `env: Env.get`
-  4. Add `.env`, `.env.prod`, `.env.dev`, `.env.valet`, and `lib/bootstrap/env.g.dart` to `.gitignore`
-  5. Remove `.env`, `.env.prod`, `.env.dev`, `.env.valet` from `pubspec.yaml` assets section (they are no longer bundled as assets)
-
-Reference (v7 `main.dart`):
-```dart
-import 'dart:ui';
-import '/bootstrap/env.g.dart';
-import 'package:nylo_framework/nylo_framework.dart';
-import 'bootstrap/boot.dart';
-
-void main() async {
-  await Nylo.init(
-    env: Env.get,
-    setup: Boot.nylo(),
-    appLifecycle: {},
-  );
-}
-```
-
-### StyledText.template — Localization Syntax (new in v7)
-
-v7 adds `{{key:text}}` syntax to `StyledText.template` that separates the **style/tap lookup key** from the **display text**. This enables localization — the key stays stable across locales while the display text changes per language. Without `:`, behavior is identical to v6 (fully backward compatible).
-
-The part before `:` is the **key** for looking up `styles` and `onTap`. The part after `:` is the **display text**.
-
-```dart
-// en.json: "learn_skills": "Learn {{lang:Languages}}, {{read:Reading}} and {{speak:Speaking}} in {{app:AppName}}"
-// es.json: "learn_skills": "Aprende {{lang:Idiomas}}, {{read:Lectura}} y {{speak:Habla}} en {{app:AppName}}"
-
-StyledText.template(
-  "learn_skills".tr(),
-  styles: {
-    "lang|read|speak": TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
-    "app": TextStyle(color: Colors.green),
-  },
-)
-```
-
-Key details:
-- Only the first colon splits — `{{time:12:30 PM}}` uses key `time`, displays `12:30 PM`
-- Works with pipe-separated style keys and `onTap` callbacks
-- When migrating v6 apps that use `StyledText.template` with localization, recommend adopting this syntax so style/tap maps don't change per locale
-
-### Asset Directory Change
-
-- `public/` directory renamed to `assets/` — this IS a framework-level change in v7
-- `public/postman/` directory removed entirely
-- Update all asset references accordingly (e.g. `public/images/` -> `assets/images/`)
-
-### Metro CLI Changes
-
-- **IMPORTANT**: `commands.json` lives inside `lib/app/commands/`, NOT at the project root
-- `lib/app/commands/custom_commands.json` renamed to `lib/app/commands/commands.json` — MUST be renamed during migration
-- If the `lib/app/commands/` directory is missing entirely, create it with the v7 default files:
-  - `commands.json` — registry of all custom commands
-  - `current_time.dart` — example command (may already exist from v6)
-  - `download_fonts.dart` — NEW in v7: downloads Google Fonts, auto-detects from design.dart, updates pubspec.yaml and design configuration
-  - `motivational_quote.dart` — NEW in v7: example interactive command with API call
-- v7 `commands.json` format (array of objects with `name`, `category`, `script`):
-  ```json
-  [
-    {"name": "quote", "category": "motivational", "script": "motivational_quote.dart"},
-    {"name": "current_time", "category": "app", "script": "current_time.dart"},
-    {"name": "download_fonts", "category": "app", "script": "download_fonts.dart"}
-  ]
-  ```
-- When migrating, preserve any existing custom commands from the v6 `custom_commands.json` and merge them into the new `commands.json`
-- Metro commands simplified to shorter format (e.g., `metro app:current_time`)
-- Reference for v7 command files: https://github.com/nylo-core/nylo/tree/7.x/lib/app/commands
-
-### Locale Files — Required `nylo` Keys (new in v7)
-
-v7 framework widgets (CollectionView, Journey, LanguageSwitcher, form pickers, etc.) expect a `"nylo"` key block in every locale file. If missing, these widgets will show raw keys instead of translated text. Add the following to ALL locale JSON files (e.g. `lang/en.json`, `lang/es.json`, etc.):
-
-```json
-"nylo": {
-  "form_picker": {
-    "clear": "Clear",
-    "select": "Select"
-  },
-  "journey": {
-    "of": "of",
-    "step": "Step",
-    "back": "Back",
-    "next": "Next",
-    "finish": "Finish"
-  },
-  "language_switcher": {
-    "title": "Select your language"
-  },
-  "collection_view": {
-    "no_results": "No results found",
-    "pull_up": "Pull up load",
-    "failed": "Failed to load more results",
-    "release": "Release to load more"
-  },
-  "confirm_action": {
-    "cancel": "Cancel",
-    "confirm": "Yes"
-  },
-  "page_not_found": {
-    "title": "Page Not Found",
-    "message": "Sorry, the page you have requested is not available.",
-    "go_back": "Go back"
-  },
-  "offline_banner": {
-    "message": "No internet connection"
-  }
-}
-```
-
-- Translate the values appropriately for non-English locale files
-- The keys themselves (e.g. `form_picker`, `journey`) must stay the same across all locales
-- This block should be added as a top-level key alongside existing translation keys
-
-### NavigationHub Layout
-
-- v6: `NavigationHubLayout? layout = NavigationHubLayout.bottomNav(...)` (field assignment)
-- v7: `NavigationHubLayout? layout(BuildContext context) => NavigationHubLayout.bottomNav();` (method with `BuildContext` parameter)
-- The `layout` is now a METHOD that receives `BuildContext`, NOT a field assignment
-- Scan all NavigationHub subclasses and convert `layout` from field to method
-
-### Button System
+### BC-17: Migrate Button System
+**Likelihood of Impact: MEDIUM**
 
 v7 overhauls the button system. **Read this section carefully — several items are commonly misunderstood.**
+
+**Codebase Scan**:
+- `class.*extends AppButton` in lib/
+- `ButtonState(` in lib/
+- `import.*app_button.dart` in lib/
 
 #### A. Migration Summary
 
@@ -968,43 +1076,226 @@ static Widget pill({
 }
 ```
 
-### Misc Code Changes
-
-- `url_launcher` removed; replaced with built-in `openUrl()` helper function
-- `User.key` changed from `static` to `static final`
+**Gotchas**:
+- Button system: `AppButton` → `StatefulAppButton`, `build()` → `buildButton()`, no `ButtonState` wrapper, `submitForm` tuple removed from factory level
+- `ButtonState` params: `skeletonizerLoading`/`loading` → `loadingStyle: LoadingStyle?`
 - Default loading style changed to `LoadingStyle.skeletonizer()`
-- Toast animations use `springFromTop()` and `fadeOut()`
-- `.env` and `lib/bootstrap/env.g.dart` should be added to `.gitignore`
 
-### Removed in v7
+### BC-18: Migrate NavigationHub Layout
+**Likelihood of Impact: MEDIUM**
 
+NavigationHub `layout` changes from a field to a method.
+
+**Codebase Scan**:
+- `NavigationHubLayout.*=` in lib/
+
+**Migration**:
+- v6: `NavigationHubLayout? layout = NavigationHubLayout.bottomNav(...)` (field assignment)
+- v7: `NavigationHubLayout? layout(BuildContext context) => NavigationHubLayout.bottomNav();` (method with `BuildContext` parameter)
+- The `layout` is now a METHOD that receives `BuildContext`, NOT a field assignment
+- Scan all NavigationHub subclasses and convert `layout` from field to method
+
+**Gotchas**:
+- NavigationHub `layout` is now a METHOD with `BuildContext` parameter, NOT a field assignment
+
+### BC-19: Migrate CollectionView Builder
+**Likelihood of Impact: MEDIUM**
+
+`NyPullToRefresh` and `NyListView` are replaced by `CollectionView<T>`.
+
+**Codebase Scan**:
+- `NyPullToRefresh\|NyListView\|NyFutureBuilder\|NyTextField` in lib/
+
+**Migration**:
+- v7 has `CollectionView<T>` which replaces both `NyPullToRefresh` and `NyListView`
+- Key constructors: `.pullable()`, `.pullableGrid()`, `.pullableSeparated()`
+- API mapping: `child:` → `builder:`, builder MUST include `BuildContext context` as the first parameter:
+  - v6: `child: (item) { ... }`
+  - v7: `builder: (BuildContext context, CollectionItem item) { ... }`
+- `data: (page) async {...}` stays the same (param renamed to `iteration` in source but works with `page`)
+- Supports: `empty:`, `header:`, `sort:`, `loadingStyle:`, `stateName:`, `scrollDirection:`
+- `CollectionView.stateReset(stateName)` replaces `NyPullToRefresh.stateReset()`
+- `CollectionView.removeFromIndex(stateName, index)` for removing items
+- `StateAction.refreshPage(stateName)` still works for triggering refreshes
+
+**Widget Removals** (replace with standard Flutter equivalents):
+- `NyFutureBuilder` → REMOVED (use standard Flutter `FutureBuilder<T>`)
+- `NyTextField` → REMOVED (use standard Flutter `TextField`)
+- `NyRichText` → REMOVED (use Flutter `Column` with `Text` children or `RichText`)
+- `NyValidator` → REMOVED (use inline validation logic)
+- `NyPullToRefresh` → `CollectionView<T>.pullable()` / `CollectionView<T>.pullableGrid()`
+- `NyPullToRefresh.grid()` → `CollectionView<T>.pullableGrid()`
+- `NyListView` → REMOVED (use standard Flutter `ListView.builder`/`ListView.separated`)
+
+**Gotchas**:
+- CollectionView `builder:` callback MUST include `BuildContext context` as the first parameter: `builder: (BuildContext context, CollectionItem item) { ... }`
+
+### BC-20: Replace url_launcher with openUrl()
+**Likelihood of Impact: LOW**
+
+The `url_launcher` package is replaced by a built-in `openUrl()` helper.
+
+**Codebase Scan**:
+- `url_launcher\|launchUrl` in lib/
+
+**Migration**:
+- Remove `url_launcher` from pubspec.yaml (already handled in BC-1)
+- Replace all `launchUrl()` / `launch()` calls with `openUrl()`
+- Remove `url_launcher` imports
+
+### BC-21: Update All Imports
+**Likelihood of Impact: HIGH**
+
+Numerous renames and restructured imports across the project.
+
+**Codebase Scan**:
+- `import.*keys.dart` in lib/
+- `Keys\.` in lib/
+- `color\.content\b\|color\.primary\b` in lib/ (flat v6 color access)
+- `appFont\b` in lib/
+- `NyLanguageSwitcher` in lib/
+
+**Migration**:
+- `Keys` → `StorageKeysConfig` (all references)
+- `color.X` → `color.general.X` for structured theme colors
+- `appFont` → `DesignConfig.appFont`
+- `NyLanguageSwitcher` → `LanguageSwitcher` (same API)
+- `User.key` changed from `static` to `static final`
+- `NyState.validate()` → REMOVED from NyState/NyPage; only exists on `NyController.validate()`
+- `NyStorage.deleteCollection()` → `NyStorage.delete()` (deprecated in v7)
+- Update all import paths for files moved in BC-5
+
+### BC-22: Add Required nylo Translation Keys
+**Likelihood of Impact: MEDIUM**
+
+v7 framework widgets expect a `"nylo"` key block in every locale file.
+
+**Codebase Scan**:
+- Check all locale files in `lang/` directory for missing `"nylo"` key
+
+**Migration**:
+
+v7 framework widgets (CollectionView, Journey, LanguageSwitcher, form pickers, etc.) expect a `"nylo"` key block in every locale file. If missing, these widgets will show raw keys instead of translated text. Add the following to ALL locale JSON files (e.g. `lang/en.json`, `lang/es.json`, etc.):
+
+```json
+"nylo": {
+  "form_picker": {
+    "clear": "Clear",
+    "select": "Select"
+  },
+  "journey": {
+    "of": "of",
+    "step": "Step",
+    "back": "Back",
+    "next": "Next",
+    "finish": "Finish"
+  },
+  "language_switcher": {
+    "title": "Select your language"
+  },
+  "collection_view": {
+    "no_results": "No results found",
+    "pull_up": "Pull up load",
+    "failed": "Failed to load more results",
+    "release": "Release to load more"
+  },
+  "confirm_action": {
+    "cancel": "Cancel",
+    "confirm": "Yes"
+  },
+  "page_not_found": {
+    "title": "Page Not Found",
+    "message": "Sorry, the page you have requested is not available.",
+    "go_back": "Go back"
+  },
+  "offline_banner": {
+    "message": "No internet connection"
+  }
+}
+```
+
+- Translate the values appropriately for non-English locale files
+- The keys themselves (e.g. `form_picker`, `journey`) must stay the same across all locales
+- This block should be added as a top-level key alongside existing translation keys
+
+### BC-23: Remove Deprecated v6 Files
+**Likelihood of Impact: LOW**
+
+Remove files and patterns that no longer exist in v7.
+
+**Codebase Scan**:
+- `deleteCollection` in lib/
+- Check for existence of files listed below
+
+**Migration**:
+
+Remove the following files/patterns:
 - `config/validation_rules.dart` and `nylo.addValidationRules()`
 - `config/form_casts.dart`
 - `config/toast_notification_styles.dart` (replaced by ToastNotificationConfig)
-- `bootstrap/app.dart` (replaced by main_widget.dart)
-- `pretty_dio_logger` dependency
-- `url_launcher` dependency (replaced by `openUrl()` helper)
-- `path_provider` dependency
-- `flutter_local_notifications` dependency
-- `scaffold_ui` dependency
-- `rename` dependency
-- `NyState.validate()` method
-- `NyPullToRefresh`, `NyListView` widgets
+- `bootstrap/app.dart` (replaced by main_widget.dart — see BC-8)
 - `test/widget_test.dart` (replaced by `test/example_test.dart` and `test/home_page_test.dart`)
 
-### New in v7
+### BC-24: Final Verification Scan
+**Likelihood of Impact: N/A** — this is a process step, not a code change.
 
-- `config/app.dart` — AppConfig final class
-- `resources/widgets/main_widget.dart` — Main widget (replaces bootstrap/app.dart)
-- `config/storage_keys.dart` uses `final class StorageKeysConfig`
-- `config/toast_notification.dart` uses `final class ToastNotificationConfig`
-- `StyledText.template` `{{key:text}}` localization syntax
-- `LocalAsset` widget — for local image assets with width, height, fit, opacity, border radius support
-- `BottomSheetModal` class extending `NyBaseModal` — new bottom sheet modal system
-- Pre-built `LogoutModal` at `resources/widgets/bottom_sheet_modals/modals/logout_modal.dart`
-- `AuthenticatedEvent` — new event calling `routeToAuthenticatedRoute()` for post-authentication navigation
-- `lang/es.json` — Spanish localization added to boilerplate
-- Home page redesigned with links-based layout and skeletonizer loading
+Run a comprehensive verification pass:
+1. Run `flutter analyze` — should produce zero migration-related warnings
+2. Re-run ALL Phase 2 codebase scans — should produce zero v6 pattern matches
+3. Run existing tests — compare against Phase 0 baseline
+4. Verify all imports are updated
+5. Verify pubspec.yaml is consistent with v7 requirements
+6. Verify the project structure matches v7 conventions
+
+---
+
+## New Features in v7
+
+These are new capabilities in v7 that are NOT breaking changes. Inform the user about them after migration is complete, but do not implement them as part of the migration unless requested.
+
+### StyledText.template — Localization Syntax
+
+v7 adds `{{key:text}}` syntax to `StyledText.template` that separates the **style/tap lookup key** from the **display text**. This enables localization — the key stays stable across locales while the display text changes per language. Without `:`, behavior is identical to v6 (fully backward compatible).
+
+The part before `:` is the **key** for looking up `styles` and `onTap`. The part after `:` is the **display text**.
+
+```dart
+// en.json: "learn_skills": "Learn {{lang:Languages}}, {{read:Reading}} and {{speak:Speaking}} in {{app:AppName}}"
+// es.json: "learn_skills": "Aprende {{lang:Idiomas}}, {{read:Lectura}} y {{speak:Habla}} en {{app:AppName}}"
+
+StyledText.template(
+  "learn_skills".tr(),
+  styles: {
+    "lang|read|speak": TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+    "app": TextStyle(color: Colors.green),
+  },
+)
+```
+
+Key details:
+- Only the first colon splits — `{{time:12:30 PM}}` uses key `time`, displays `12:30 PM`
+- Works with pipe-separated style keys and `onTap` callbacks
+- When migrating v6 apps that use `StyledText.template` with localization, recommend adopting this syntax so style/tap maps don't change per locale
+
+### LocalAsset Widget
+
+`LocalAsset` widget — for local image assets with width, height, fit, opacity, border radius support.
+
+### BottomSheetModal
+
+`BottomSheetModal` class extending `NyBaseModal` — new bottom sheet modal system. Pre-built `LogoutModal` at `resources/widgets/bottom_sheet_modals/modals/logout_modal.dart`.
+
+### AuthenticatedEvent
+
+`AuthenticatedEvent` — new event calling `routeToAuthenticatedRoute()` for post-authentication navigation.
+
+### New Locale Files
+
+`lang/es.json` — Spanish localization added to boilerplate.
+
+### Home Page Redesign
+
+Home page redesigned with links-based layout and skeletonizer loading.
 
 ### Test File Migration
 
@@ -1013,28 +1304,26 @@ static Widget pill({
 - v6 test theme wrappers: `ThemeProvider`/`ThemeConsumer`/`Nylo.getAppThemes()` — removed in v7
 - v6 test deps: `flutter_dotenv` — remove and use Env.g.dart system instead
 
-### Common Gotchas
+---
 
-- Toast widget class name conflicts with v7 framework `ToastNotification` class
-- Custom ColorStyles properties (not in v7 boilerplate) must be preserved as direct properties alongside structured groups
-- `ThemeColor` is now a framework class in v7; if project used `ThemeColor` as a helper, rename to `ThemeColorResolver` and add typedef for backward compat
-- `context.color.content` (flat v6) becomes `context.color.general.content` (structured v7) — but custom properties stay flat
-- When concrete theme classes use `implements ColorStyles`, they must provide ALL members including `general`, `appBar`, `bottomTabBar`. Fix: change from `implements` to `extends` so they inherit defaults
-- `public/` → `assets/` is a v7 framework change — must rename and update all references
-- `lib/app/commands/custom_commands.json` → `lib/app/commands/commands.json` — file lives INSIDE the commands directory, NOT at project root
-- If `lib/app/commands/` directory is missing, scaffold it with v7 defaults (commands.json, current_time.dart, download_fonts.dart, motivational_quote.dart)
-- `syncKeys: StorageKeysConfig.syncedOnBoot` — NO parentheses. It's a getter reference, not a method call. Writing `syncedOnBoot()` will cause a compile error
-- `runApp(Main(nylo))` — MUST pass the `nylo` instance to `Main()`. Omitting it causes the app to fail at boot
-- `BaseThemeConfig` no longer has a `description` parameter in v7 — remove it or you get a compile error
-- `api<>()` calls no longer accept `context: context` — remove the parameter from all controller `api<>()` calls
-- Form fields: `validate:` renamed to `validator:`, and `style: "compact"` is removed entirely
-- All models extending `Model` must have explicit `Map<String, dynamic>` return type on `toJson()` — implicit return types cause errors
-- `handleSuccess` callbacks must use `NyResponse` type, NOT `Response` or untyped `response`
-- `nylo.configure()` parameter names: use `themes:` (not `appThemes:`), `toastNotifications:` (not `toastNotification:`). Include `useErrorStack:` as a param, not a separate `nylo.useErrorStack()` call. Include `localization:` as a param, not a separate `NyLocalization.instance.init()` call
-- `main.dart` MUST include `env: Env.get` — run `make:key` and `make:env --force` to generate the env files. Remove `.env` files from `pubspec.yaml` assets
-- NavigationHub `layout` is now a METHOD with `BuildContext` parameter, NOT a field assignment
-- Button system: `AppButton` → `StatefulAppButton`, `build()` → `buildButton()`, no `ButtonState` wrapper, `submitForm` tuple removed
-- CollectionView `builder:` callback MUST include `BuildContext context` as the first parameter: `builder: (BuildContext context, CollectionItem item) { ... }`
+## Important Rules
+
+1. **ALWAYS start with Phase 0** — never jump straight to making changes
+2. **ALWAYS present the migration task list** before implementing changes
+3. **Be conservative** — if you're unsure whether something needs to change, flag it for the user rather than changing it
+4. **Preserve custom logic** — the user's business logic, custom widgets, and app-specific code should be preserved. Only change framework-related patterns
+5. **One step at a time** — methodical, verifiable changes. Never bulk-change everything at once
+6. **Explain every change** — the user should understand what changed and why
+7. **Back up awareness** — remind the user to ensure they have their code in version control before starting migration
+8. **Don't assume** — if the v7 boilerplate has a pattern you're not 100% sure about, read the actual source code rather than guessing
+
+## Communication Style
+
+- Be thorough and precise in your explanations
+- Use code diffs or before/after comparisons when showing changes
+- Group related changes logically
+- Provide context for WHY each change is needed, not just WHAT to change
+- If the migration reveals potential improvements beyond v7 compatibility, note them as optional enhancements but don't implement them as part of the migration
 
 ---
 
