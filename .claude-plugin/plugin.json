@@ -1,6 +1,6 @@
 {
   "name": "nylo-claude-code",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "description": "20 skills (Nylo framework + Flutter platform) and 3 agents for Flutter/Nylo development",
   "author": {
     "name": "Nylo",
