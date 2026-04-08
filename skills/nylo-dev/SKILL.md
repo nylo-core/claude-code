@@ -1,6 +1,6 @@
 ---
-name: nylo-developer
-description: A skill that spawns the Nylo developer agent to handle a devleopment tasks in the users Nylo Flutter project.
+name: nylo-dev
+description: A skill that spawns the Nylo developer agent to handle development tasks in the users Nylo Flutter project.
 ---
 
 # Nylo Developer
